@@ -12,36 +12,26 @@ class AggregationBypassPolicyTest {
     @Test
     void controlPacketsAlwaysBypassAggregation() {
         assertTrue(AggregationBypassPolicy.shouldBypass(
-                "minecraft:chat", false, Set.of(), false));
+                "minecraft:chat", false, Set.of()));
     }
 
     @Test
-    void latencySensitivePacketsBypassByDefault() {
-        assertTrue(AggregationBypassPolicy.shouldBypass(
-                "minecraft:move_player_pos", false, Set.of(), true));
-        assertTrue(AggregationBypassPolicy.shouldBypass(
-                "minecraft:interact", false, Set.of(), true));
-        assertTrue(AggregationBypassPolicy.shouldBypass(
-                "minecraft:container_click", false, Set.of(), true));
-    }
-
-    @Test
-    void latencySensitiveBypassCanBeDisabled() {
+    void latencySensitivePacketsNoLongerBypassByDefault() {
         assertFalse(AggregationBypassPolicy.shouldBypass(
-                "minecraft:move_player_pos", false, Set.of(), false));
+                "minecraft:move_player_pos", false, Set.of()));
     }
 
     @Test
     void compatibilityBlacklistStillWorks() {
         assertFalse(AggregationBypassPolicy.shouldBypass(
-                "example:custom_packet", false, Set.of("example:custom_packet"), true));
+                "example:custom_packet", false, Set.of("example:custom_packet")));
         assertTrue(AggregationBypassPolicy.shouldBypass(
-                "example:custom_packet", true, Set.of("example:custom_packet"), true));
+                "example:custom_packet", true, Set.of("example:custom_packet")));
     }
 
     @Test
-    void nonSensitivePacketsStillAggregate() {
+    void regularPacketsStillAggregate() {
         assertFalse(AggregationBypassPolicy.shouldBypass(
-                "minecraft:level_chunk_with_light", false, Set.of(), true));
+                "minecraft:level_chunk_with_light", false, Set.of()));
     }
 }

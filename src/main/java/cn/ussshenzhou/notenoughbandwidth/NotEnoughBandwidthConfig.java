@@ -18,7 +18,6 @@ public class NotEnoughBandwidthConfig implements TConfig {
         add("minecraft:player_info_update");
         add("minecraft:player_info_remove");
     }};
-    public boolean prioritizeLatencySensitivePackets = true;
     public boolean requireClientMod = true;
     public boolean debugLog = false;
     public int aggregationFlushPeriodMs = 5;
@@ -37,8 +36,7 @@ public class NotEnoughBandwidthConfig implements TConfig {
 
     public static boolean skipType(String type) {
         var cfg = get();
-        return AggregationBypassPolicy.shouldBypass(
-                type, cfg.compatibleMode, cfg.blackList, cfg.prioritizeLatencySensitivePackets);
+        return AggregationBypassPolicy.shouldBypass(type, cfg.compatibleMode, cfg.blackList);
     }
 
     public int getAggregationFlushPeriodMs() {

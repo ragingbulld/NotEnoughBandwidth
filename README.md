@@ -88,12 +88,6 @@ The blacklist for compatibility mode. Packets listed here will be skipped by NEB
 > [!WARNING]
 > To ensure packet ordering, packets in the blacklist will interrupt the ongoing aggregation. If there are many packets in the blacklist, or if the corresponding packets are sent too frequently, the efficiency of aggregation-compression will decrease.
 
-### prioritizeLatencySensitivePackets
-
-> **Works independently on client and server.**
-
-Whether movement, interaction, and inventory-click packets should bypass aggregation by default. Default is `true`. Turning it off can improve compression, but it is more likely to increase perceived latency and ping.
-
 ### requireClientMod
 
 > **Server only.**
