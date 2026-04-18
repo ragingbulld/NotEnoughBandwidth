@@ -1,8 +1,23 @@
 package cn.ussshenzhou.notenoughbandwidth.aggregation;
 
+import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidthConfig;
+
 public class AggregationFlushHelper {
     public static int getFlushPeriodInMilliseconds() {
-        return 20;
+        return clampFlushPeriodInMilliseconds(
+                NotEnoughBandwidthConfig.get().getAggregationFlushPeriodMs());
+    }
+
+    static int clampFlushPeriodInMilliseconds(int configuredMillis) {
+        return Math.clamp(configuredMillis, 5, 20);
+    }
+
+    public static int getMaxExtraCycles() {
+        return clampMaxExtraCycles(NotEnoughBandwidthConfig.get().getAggregationMaxExtraCycles());
+    }
+
+    static int clampMaxExtraCycles(int configuredCycles) {
+        return Math.clamp(configuredCycles, 0, 2);
     }
 
     public static int getFlushCountInSeconds() {

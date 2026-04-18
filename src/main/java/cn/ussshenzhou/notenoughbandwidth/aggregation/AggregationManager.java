@@ -21,7 +21,6 @@ import java.util.concurrent.*;
 public class AggregationManager {
     private static final Logger LOGGER = LoggerFactory.getLogger("NEB-Aggregation");
     private static final int MIN_BATCH_PACKETS = 4;
-    private static final int MAX_EXTRA_CYCLES = 2;
     private static final ConcurrentHashMap<ClientConnection, ArrayList<AggregatedEncodePacket>> PACKET_BUFFER = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<ClientConnection, Integer> FLUSH_WAIT = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService TIMER = Executors.newSingleThreadScheduledExecutor(
@@ -65,7 +64,7 @@ public class AggregationManager {
                 }
                 if (packets.size() < MIN_BATCH_PACKETS) {
                     int waited = FLUSH_WAIT.getOrDefault(connection, 0);
-                    if (waited < MAX_EXTRA_CYCLES) {
+                    if (waited < AggregationFlushHelper.getMaxExtraCycles()) {
                         FLUSH_WAIT.put(connection, waited + 1);
                         continue;
                     }

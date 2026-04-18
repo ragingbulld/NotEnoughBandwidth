@@ -2,6 +2,7 @@ package cn.ussshenzhou.notenoughbandwidth;
 
 import cn.ussshenzhou.notenoughbandwidth.aggregation.AggregationManager;
 import cn.ussshenzhou.notenoughbandwidth.chunkcache.ChunkCacheManager;
+import cn.ussshenzhou.notenoughbandwidth.mixin.ClientCommonPacketListenerAccessor;
 import cn.ussshenzhou.notenoughbandwidth.network.IndexSyncHandler;
 import cn.ussshenzhou.notenoughbandwidth.network.ModNetworking;
 import cn.ussshenzhou.notenoughbandwidth.network.NebConnectionRegistry;
@@ -9,8 +10,10 @@ import cn.ussshenzhou.notenoughbandwidth.stat.ModKey;
 import cn.ussshenzhou.notenoughbandwidth.stat.SystemTrafficMonitor;
 import cn.ussshenzhou.notenoughbandwidth.zstd.ZstdHelper;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.network.ClientConnection;
 
 public class NotEnoughBandwidthClient implements ClientModInitializer {
     @Override
@@ -23,16 +26,26 @@ public class NotEnoughBandwidthClient implements ClientModInitializer {
         ChunkCacheManager.setGameDir(MinecraftClient.getInstance().runDirectory.toPath());
 
         // On server switch (Velocity), the same ClientConnection is reused but the
-        // backend server changes. Disable NEB and discard stale buffered packets so
-        // everything flows vanilla until the new server's handshake re-enables NEB.
+        // backend server changes. Reset NEB state as soon as we enter CONFIGURATION,
+        // and again on PLAY init for direct joins.
+        ClientConfigurationConnectionEvents.INIT.register((handler, client) ->
+                resetClientConnectionState(((ClientCommonPacketListenerAccessor) handler).nebGetConnection(), true));
         ClientPlayConnectionEvents.INIT.register((handler, client) -> {
-            var conn = handler.getConnection();
-            NebConnectionRegistry.markDisabled(conn);
-            AggregationManager.discardConnection(conn);
-            ZstdHelper.evict(conn);
+            resetClientConnectionState(handler.getConnection(), false);
         });
 
+        ClientConfigurationConnectionEvents.DISCONNECT.register((handler, client) ->
+                ChunkCacheManager.onClientDisconnect());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->
                 ChunkCacheManager.onClientDisconnect());
+    }
+
+    private static void resetClientConnectionState(ClientConnection connection, boolean closeChunkCache) {
+        NebConnectionRegistry.markDisabled(connection);
+        AggregationManager.discardConnection(connection);
+        ZstdHelper.evict(connection);
+        if (closeChunkCache) {
+            ChunkCacheManager.onClientDisconnect();
+        }
     }
 }

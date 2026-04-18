@@ -6,17 +6,24 @@ import cn.ussshenzhou.notenoughbandwidth.chunkcache.ChunkCacheManager;
 import cn.ussshenzhou.notenoughbandwidth.indextype.NamespaceIndexManager;
 import cn.ussshenzhou.notenoughbandwidth.zstd.DictionaryManager;
 import cn.ussshenzhou.notenoughbandwidth.zstd.ZstdHelper;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.impl.networking.PayloadTypeRegistryImpl;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayNetworkHandler;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -28,6 +35,10 @@ import java.util.stream.Collectors;
  */
 public class IndexSyncHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger("NEB-IndexSync");
+    private static final int CLIENT_ACK_TIMEOUT_MILLIS = 500;
+    private static final ScheduledExecutorService HANDSHAKE_TIMEOUT_TIMER =
+            Executors.newSingleThreadScheduledExecutor(
+                    new ThreadFactoryBuilder().setNameFormat("NEB-Handshake-timeout").setDaemon(true).build());
     private static Field packetTypesField;
 
     static {
@@ -67,6 +78,9 @@ public class IndexSyncHandler {
             LOGGER.info("Sent dictionary ({}) and index sync to {} ({} types, serverId={}), awaiting NEB ack",
                     dict != null ? dict.length + " bytes" : "none",
                     handler.player.getName().getString(), types.size(), serverId);
+            if (NotEnoughBandwidthConfig.get().requireClientMod) {
+                scheduleAckTimeout(handler, server);
+            }
         });
     }
 
@@ -122,5 +136,18 @@ public class IndexSyncHandler {
         return types.stream()
                 .sorted(Comparator.comparing(Identifier::getNamespace).thenComparing(Identifier::getPath))
                 .collect(Collectors.toList());
+    }
+
+    private static void scheduleAckTimeout(ServerPlayNetworkHandler handler, MinecraftServer server) {
+        var connection = handler.connection;
+        var playerName = handler.player.getName().getString();
+        HANDSHAKE_TIMEOUT_TIMER.schedule(() -> server.execute(() -> {
+            if (!connection.isOpen() || NebConnectionRegistry.isEnabled(connection)) {
+                return;
+            }
+            LOGGER.info("Disconnecting {}: NEB client ack was not received within {}ms",
+                    playerName, CLIENT_ACK_TIMEOUT_MILLIS);
+            handler.disconnect(Text.literal("This server requires the NotEnoughBandwidth client mod."));
+        }), CLIENT_ACK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 }

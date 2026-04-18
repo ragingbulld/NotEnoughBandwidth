@@ -77,6 +77,7 @@ Modify the configuration file at `config/NotEnoughBandwidthConfig.json`.
 > **Works independently on client and server.**
 
 Whether to enable compatibility mode. If set to `true`, the `blackList` below will be used.
+Default is `true`.
 
 ### blackList
 
@@ -86,6 +87,26 @@ The blacklist for compatibility mode. Packets listed here will be skipped by NEB
 
 > [!WARNING]
 > To ensure packet ordering, packets in the blacklist will interrupt the ongoing aggregation. If there are many packets in the blacklist, or if the corresponding packets are sent too frequently, the efficiency of aggregation-compression will decrease.
+
+### prioritizeLatencySensitivePackets
+
+> **Works independently on client and server.**
+
+Whether movement, interaction, and inventory-click packets should bypass aggregation by default. Default is `true`. Turning it off can improve compression, but it is more likely to increase perceived latency and ping.
+
+### requireClientMod
+
+> **Server only.**
+
+Whether the server should require the NEB client mod. Default is `true`. When enabled, the server disconnects clients that do not send the `NebAck` handshake instead of falling back to vanilla behavior.
+
+### aggregationFlushPeriodMs, aggregationMaxExtraCycles
+
+> **Works independently on client and server.**
+
+Aggregation flush period and the number of extra cycles allowed while waiting for a larger batch. Defaults are `5` ms and `0`.
+
+With the new defaults, low-traffic batches wait for at most about `5` ms instead of the previous `60` ms worst case.
 
 ### compressionLevel
 
@@ -127,7 +148,7 @@ Requires:
 - Fabric Loader >= 0.18.0
 - Fabric API
 
-**Both client and server must install NEB.** When a client without NEB connects, the server falls back to vanilla behavior for that connection.
+**Both client and server must install NEB.** With the default configuration, clients without NEB are disconnected. Set `requireClientMod` to `false` if you want the server to fall back to vanilla behavior for those connections.
 
 ## License
 
